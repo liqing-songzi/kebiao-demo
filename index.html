@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#5b6ef5">
+<title>课时表提醒</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="课时表提醒">
+<style>
+  :root{
+    --bg:#eef1f8; --card:#ffffff; --ink:#1f2540; --sub:#7a82a3;
+    --pri:#5b6ef5; --pri2:#8b7bf6; --teal:#19c4b8; --amber:#ffab40;
+    --red:#ff5d6c; --green:#33c46b; --line:#e7eaf3;
+    --shadow:0 8px 24px rgba(60,70,120,.10);
+    --radius:18px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--bg);color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .app{max-width:480px;margin:0 auto;min-height:100vh;position:relative;
+    background:linear-gradient(180deg,#f4f6ff 0%,#eef1f8 220px);}
+  /* Header */
+  .top{padding:calc(env(safe-area-inset-top) + 18px) 18px 14px;}
+  .top .date{font-size:13px;color:var(--sub);font-weight:600;letter-spacing:.5px}
+  .top .greet{font-size:24px;font-weight:800;margin-top:4px;display:flex;align-items:baseline;gap:8px}
+  .top .greet .wd{font-size:14px;font-weight:700;color:var(--pri);
+    background:rgba(91,110,245,.12);padding:3px 10px;border-radius:999px}
+  .top .next{margin-top:10px;font-size:13px;color:var(--sub)}
+  .top .next b{color:var(--ink)}
+  /* brand + help */
+  .top .brand{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .top .logo{width:42px;height:42px;border-radius:13px;background:linear-gradient(135deg,var(--pri),var(--pri2));
+    color:#fff;font-weight:800;font-size:21px;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(91,110,245,.35)}
+  .top .appname{font-size:17px;font-weight:800;line-height:1.1}
+  .top .date{font-size:12px;color:var(--sub);font-weight:600;margin-top:2px}
+  .top .help{margin-left:auto;width:30px;height:30px;border-radius:50%;background:rgba(91,110,245,.14);
+    color:var(--pri);font-weight:800;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer}
+  .top .stat-pill{font-size:12px;font-weight:800;color:var(--teal);background:rgba(25,196,184,.13);
+    padding:3px 10px;border-radius:999px;margin-left:auto}
+  /* welcome onboarding */
+  .welcome{text-align:center;padding:34px 18px 20px}
+  .welcome .wbig{font-size:54px}
+  .welcome .wt{font-size:19px;font-weight:800;margin-top:8px}
+  .welcome .ws{font-size:13px;color:var(--sub);margin-top:4px}
+  .welcome .wstep{display:flex;align-items:center;gap:10px;text-align:left;background:var(--card);
+    border-radius:14px;box-shadow:var(--shadow);padding:12px 14px;margin-top:12px;font-size:13.5px;font-weight:600;line-height:1.45}
+  .welcome .wstep b{flex:none;width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,var(--pri),var(--pri2));
+    color:#fff;font-size:13px;display:flex;align-items:center;justify-content:center}
+  .welcome .btn-pri{margin-top:18px}
+  /* help sheet list */
+  .hlist{padding:4px 0}
+  .hlist .hi{display:flex;gap:10px;padding:11px 0;border-bottom:1px solid var(--line)}
+  .hlist .hi:last-child{border-bottom:none}
+  .hlist .hi .n{flex:none;width:22px;height:22px;border-radius:7px;background:rgba(91,110,245,.14);color:var(--pri);
+    font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center}
+  .hlist .hi .t{font-size:13.5px;font-weight:700}
+  .hlist .hi .d{font-size:12px;color:var(--sub);margin-top:2px;line-height:1.5}
+  .badge-multi{display:inline-block;background:rgba(25,196,184,.13);color:var(--teal);font-size:11px;font-weight:800;
+    padding:2px 8px;border-radius:999px;margin-left:6px}
+
+  /* Tabs content */
+  .tab{display:none;padding:6px 14px 96px;animation:fade .25s ease}
+  .tab.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  /* Today period cards */
+  .pcard{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);
+    padding:14px 16px;margin-bottom:12px;display:flex;gap:14px;align-items:stretch;position:relative;overflow:hidden}
+  .pcard .bar{width:5px;border-radius:6px;flex:none}
+  .pcard .main{flex:1;min-width:0}
+  .pcard .tm{font-size:12px;color:var(--sub);font-weight:700;font-variant-numeric:tabular-nums}
+  .pcard .sb{font-size:18px;font-weight:800;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pcard .meta{font-size:12.5px;color:var(--sub);margin-top:4px;display:flex;gap:10px;flex-wrap:wrap}
+  .pcard .meta span{display:inline-flex;align-items:center;gap:3px}
+  .pcard .stat{position:absolute;top:12px;right:14px;font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px}
+  .st-done{background:rgba(122,130,163,.14);color:var(--sub)}
+  .st-now{background:rgba(51,196,107,.15);color:var(--green)}
+  .st-wait{background:rgba(91,110,245,.12);color:var(--pri)}
+  .pcard .cd{font-size:11.5px;color:var(--amber);font-weight:700;margin-top:6px}
+  .empty{text-align:center;color:var(--sub);padding:48px 20px;font-size:14px}
+  .empty .big{font-size:40px;margin-bottom:10px}
+
+  /* day chips on schedule */
+  .daybar{display:flex;gap:6px;overflow-x:auto;padding:4px 0 10px;scrollbar-width:none}
+  .daybar::-webkit-scrollbar{display:none}
+  .chip{flex:none;padding:8px 12px;border-radius:12px;background:var(--card);box-shadow:var(--shadow);
+    font-size:13px;font-weight:700;color:var(--sub);border:2px solid transparent;min-width:46px;text-align:center}
+  .chip.on{color:#fff;background:linear-gradient(135deg,var(--pri),var(--pri2));border-color:transparent}
+
+  .sectitle{font-size:14px;font-weight:800;margin:14px 4px 8px;display:flex;justify-content:space-between;align-items:center}
+  .sectitle .count{font-size:12px;color:var(--sub);font-weight:700}
+  .row{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:12px 14px;margin-bottom:10px;
+    display:flex;align-items:center;gap:12px}
+  .row .dot{width:9px;height:9px;border-radius:50%;flex:none}
+  .row .info{flex:1;min-width:0}
+  .row .info .a{font-size:15px;font-weight:800}
+  .row .info .b{font-size:12px;color:var(--sub);margin-top:2px}
+  .row .tm{font-size:12px;color:var(--sub);font-weight:700;font-variant-numeric:tabular-nums;flex:none}
+  .row .del{flex:none;color:var(--red);font-size:18px;padding:6px 8px;border-radius:10px;background:rgba(255,93,108,.1)}
+
+  /* Settings */
+  .setgrp{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:6px 16px;margin-bottom:14px}
+  .setrow{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--line)}
+  .setrow:last-child{border-bottom:none}
+  .setrow .l{font-size:15px;font-weight:700}
+  .setrow .d{font-size:12px;color:var(--sub);margin-top:2px}
+  .setrow .r{display:flex;align-items:center;gap:8px}
+  .stepper{display:flex;align-items:center;background:var(--bg);border-radius:10px;overflow:hidden}
+  .stepper button{width:32px;height:32px;border:none;background:var(--bg);font-size:18px;font-weight:800;color:var(--pri)}
+  .stepper input{width:42px;text-align:center;border:none;background:var(--bg);font-size:15px;font-weight:800;color:var(--ink);-moz-appearance:textfield}
+  .stepper input::-webkit-outer-spin-button,.stepper input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .stepper .u{font-size:11px;color:var(--sub);padding-right:8px}
+  /* toggle */
+  .sw{position:relative;width:46px;height:27px;flex:none}
+  .sw input{opacity:0;width:0;height:0}
+  .sw .sl{position:absolute;inset:0;background:#d4d9ea;border-radius:999px;transition:.2s;cursor:pointer}
+  .sw .sl:before{content:"";position:absolute;width:21px;height:21px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+  .sw input:checked + .sl{background:linear-gradient(135deg,var(--pri),var(--pri2))}
+  .sw input:checked + .sl:before{transform:translateX(19px)}
+  select.inp,input.inp{font-size:15px;font-weight:700;color:var(--ink);border:none;background:var(--bg);
+    border-radius:10px;padding:9px 12px;outline:none;font-family:inherit}
+  input.inp{flex:1;width:100%}
+  .field{margin:0;padding:12px 0;border-bottom:1px solid var(--line)}
+  .field:last-child{border-bottom:none}
+  .field label{font-size:12px;color:var(--sub);font-weight:700;display:block;margin-bottom:7px}
+  .field .line{display:flex;gap:10px;align-items:center}
+  .field select.inp,.field input.inp{flex:1}
+  .hint{font-size:11.5px;color:var(--sub);margin-top:7px;line-height:1.5}
+
+  /* FAB + bottom nav */
+  .fab{position:fixed;bottom:78px;right:max(18px,calc(50% - 222px));width:54px;height:54px;border-radius:50%;
+    background:linear-gradient(135deg,var(--pri),var(--pri2));color:#fff;border:none;font-size:28px;
+    box-shadow:0 10px 26px rgba(91,110,245,.45);z-index:30;display:flex;align-items:center;justify-content:center}
+  .nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;
+    background:rgba(255,255,255,.92);backdrop-filter:blur(12px);display:flex;
+    border-top:1px solid var(--line);padding:8px 0 calc(env(safe-area-inset-bottom) + 8px);z-index:25}
+  .nav .it{flex:1;text-align:center;color:var(--sub);font-size:11px;font-weight:700;padding:4px 0}
+  .nav .it .ic{font-size:21px;display:block;margin-bottom:2px;line-height:1}
+  .nav .it.on{color:var(--pri)}
+
+  /* Modal */
+  .mask{position:fixed;inset:0;background:rgba(20,26,55,.45);z-index:40;display:none;align-items:flex-end;justify-content:center}
+  .mask.show{display:flex;animation:fade .2s}
+  .sheet{background:#fff;width:100%;max-width:480px;border-radius:22px 22px 0 0;padding:18px 18px calc(env(safe-area-inset-bottom) + 22px);
+    max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    animation:up .25s ease}
+  @keyframes up{from{transform:translateY(100%)}to{transform:none}}
+  .sheet h3{margin:0 0 4px;font-size:18px;font-weight:800}
+  .sheet .sub{font-size:12.5px;color:var(--sub);margin-bottom:10px}
+  .btn{padding:13px;border:none;border-radius:14px;font-size:15px;font-weight:800;font-family:inherit;cursor:pointer}
+  .btn-pri{background:linear-gradient(135deg,var(--pri),var(--pri2));color:#fff;width:100%;margin-top:14px;box-shadow:0 8px 20px rgba(91,110,245,.35)}
+  .btn-ghost{background:var(--bg);color:var(--sub);width:100%;margin-top:10px}
+
+  /* Toast / banner */
+  .banner{position:fixed;top:calc(env(safe-area-inset-top) + 10px);left:50%;transform:translateX(-50%) translateY(-160%);
+    width:calc(100% - 28px);max-width:452px;background:linear-gradient(135deg,#5b6ef5,#8b7bf6);color:#fff;
+    border-radius:16px;padding:14px 16px;box-shadow:0 12px 30px rgba(91,110,245,.5);z-index:60;transition:transform .35s cubic-bezier(.2,.8,.2,1)}
+  .banner.show{transform:translateX(-50%) translateY(0)}
+  .banner .bt{font-size:13px;font-weight:800;opacity:.9}
+  .banner .bb{font-size:17px;font-weight:800;margin-top:3px}
+  .banner .bc{font-size:13px;margin-top:4px;opacity:.92}
+  .toast{position:fixed;bottom:130px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(31,37,64,.92);color:#fff;
+    padding:10px 18px;border-radius:999px;font-size:13px;font-weight:700;opacity:0;z-index:70;transition:.25s;pointer-events:none}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  /* ---------- 授权锁 ---------- */
+  body.locked .app{display:none}
+  .lock{position:fixed;inset:0;z-index:9999;background:linear-gradient(160deg,#5b6ef5,#8b7bf6);
+    display:flex;align-items:center;justify-content:center;padding:24px}
+  body:not(.locked) .lock{display:none}
+  .lockbox{width:100%;max-width:340px;background:#fff;border-radius:22px;padding:30px 24px;text-align:center;
+    box-shadow:0 20px 60px rgba(0,0,0,.25)}
+  .locklogo{width:64px;height:64px;border-radius:18px;margin:0 auto 12px;
+    background:linear-gradient(135deg,var(--pri),var(--pri2));color:#fff;font-weight:800;font-size:32px;
+    display:flex;align-items:center;justify-content:center}
+  .lockt{font-size:21px;font-weight:800}
+  .locks{font-size:13px;color:var(--sub);margin:10px 0 18px;line-height:1.7}
+  .lockin{width:100%;box-sizing:border-box;padding:13px 14px;border:2px solid var(--line);border-radius:13px;
+    font-size:15px;text-align:center;letter-spacing:1px;outline:none;font-family:inherit}
+  .lockin:focus{border-color:var(--pri)}
+  .lockbtn{width:100%;margin-top:12px;padding:13px;border:none;border-radius:13px;
+    background:linear-gradient(135deg,var(--pri),var(--pri2));color:#fff;font-size:16px;font-weight:800;cursor:pointer}
+  .lockerr{display:none;color:var(--red);font-size:12.5px;font-weight:700;margin-top:10px}
+  .locknote{font-size:11.5px;color:var(--sub);margin-top:14px;line-height:1.5}
+  .shake{animation:shake .4s}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+  /* 课表页：统计栏(柱状图) + 单日列表 */
+  .chartcard{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px;margin-bottom:14px}
+  .barchart{display:flex;align-items:flex-end;gap:6px;height:104px;padding:6px 2px 0}
+  .barchart .bc{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:100%}
+  .barchart .bv{font-size:13px;font-weight:800;color:var(--ink);min-height:16px}
+  .barchart .bar{width:100%;max-width:30px;border-radius:8px 8px 0 0;background:linear-gradient(180deg,var(--pri),var(--pri2));transition:height .3s}
+  .barchart .bl{font-size:11px;color:var(--sub);font-weight:700}
+  .daybar{display:flex;gap:6px;overflow-x:auto;padding:2px 0}
+  .daybar .chip{flex:1;min-width:44px;text-align:center;background:var(--card);box-shadow:var(--shadow);border-radius:12px;padding:8px 2px;font-size:13px;font-weight:800;color:var(--sub);cursor:pointer;line-height:1.3}
+  .daybar .chip.on{background:var(--pri);color:#fff}
+  .row{display:flex;align-items:center;gap:10px;background:var(--card);box-shadow:var(--shadow);border-radius:12px;padding:10px 12px;margin-bottom:8px;cursor:pointer}
+  .row .dot{width:10px;height:10px;border-radius:50%;flex:none}
+  .row .info{flex:1;min-width:0}
+  .row .a{font-size:14px;font-weight:800}
+  .row .b{font-size:12px;color:var(--sub);margin-top:2px}
+  .row .tm{font-size:12px;font-weight:800;color:var(--pri);text-align:right;line-height:1.3}
+  .row .del{color:var(--sub);font-size:16px;padding:0 4px}
+  .empty{text-align:center;color:var(--sub);padding:40px 0}
+  .empty .big{font-size:40px;opacity:.4}
+  .statcard{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px;margin-bottom:14px}
+  .statgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+  .statgrid .st{text-align:center;background:rgba(91,110,245,.07);border-radius:10px;padding:10px 2px}
+  .statgrid .sv{font-size:16px;font-weight:800;color:var(--pri)}
+  .statgrid .sl{font-size:10px;color:var(--sub);margin-top:3px;font-weight:700}
+  .tag{display:inline-block;font-size:10px;font-weight:800;padding:1px 6px;border-radius:8px;margin-left:6px;vertical-align:middle;color:#fff;background:#9aa0b5}
+  .tag-ot{background:#ff5d6c}
+  .tag-dk{background:#ffab40}
+  .tag-bk{background:#19c4b8}
+  /* 今日记账 */
+  .recbar{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--card);
+    border-radius:var(--radius);box-shadow:var(--shadow);padding:11px 14px;margin-bottom:12px}
+  .recbar .rb-l{font-size:13px;font-weight:800;color:var(--ink)}
+  .recbar .rb-l b{color:var(--pri);font-size:15px;margin:0 2px}
+  .recbar .rb-r{font-size:12px;font-weight:800;color:#fff;background:linear-gradient(135deg,var(--pri),var(--pri2));
+    border:none;border-radius:999px;padding:7px 14px;white-space:nowrap}
+  .recbtn{display:inline-block;margin-top:8px;font-size:12px;font-weight:800;color:#fff;
+    background:linear-gradient(135deg,#ff8a3d,#ff5d6c);border:none;border-radius:999px;padding:5px 12px}
+  .recbtn.on{background:rgba(25,196,184,.15);color:#13a99e;border:1px solid #19c4b8}
+  /* 累计实发 + 历史 */
+  .statgrid .st.big .sv{font-size:20px}
+  .lg{display:flex;align-items:center;gap:10px;background:var(--card);border-radius:10px;
+    box-shadow:var(--shadow);padding:10px 12px;margin-bottom:8px}
+  .lgm{flex:1;min-width:0}
+  .lgs{font-size:14px;font-weight:800;display:flex;align-items:center}
+  .lgd{font-size:11.5px;color:var(--sub);margin-top:2px}
+  .lgf{font-size:15px;font-weight:800;color:var(--pri);font-variant-numeric:tabular-nums}
+  .lgdel{flex:none;border:none;background:rgba(255,93,108,.12);color:#ff5d6c;font-size:15px;
+    width:34px;height:34px;border-radius:9px}
+  .empty.sm{padding:24px 12px;font-size:13px;line-height:1.6}
+  /* 操作手册（内置） */
+  .manual-mask{background:rgba(20,26,55,.5);align-items:stretch;justify-content:center}
+  .manual-mask.show{display:flex}
+  .manual{width:100%;max-width:480px;background:var(--bg);display:flex;flex-direction:column;
+    animation:up .25s ease;max-height:100vh}
+  .manual-head{position:sticky;top:0;z-index:2;background:linear-gradient(135deg,var(--pri),var(--pri2));color:#fff;
+    padding:calc(env(safe-area-inset-top) + 15px) 18px 13px;display:flex;align-items:center;justify-content:space-between;
+    font-size:17px;font-weight:800}
+  .manual-head .x{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.2);
+    display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer}
+  .manual-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px 14px calc(env(safe-area-inset-bottom) + 20px)}
+  .mcard{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px;margin-bottom:12px}
+  .mcard h4{margin:0 0 7px;font-size:15px;font-weight:800;display:flex;align-items:center;gap:7px}
+  .mcard h4 .em{font-size:17px}
+  .mcard p{margin:6px 0;font-size:13px;line-height:1.65}
+  .mcard ul{margin:6px 0;padding-left:18px}
+  .mcard li{font-size:13px;line-height:1.7}
+  .mcard .k{font-weight:800}
+  .mstep{display:flex;gap:10px;align-items:flex-start;margin:8px 0}
+  .mstep b{flex:none;width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,var(--pri),var(--pri2));
+    color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;margin-top:1px}
+  .mnote{background:rgba(91,110,245,.08);border-left:3px solid var(--pri);border-radius:0 10px 10px 0;
+    padding:9px 12px;font-size:12px;color:var(--sub);margin-top:8px;line-height:1.55}
+  .mtag{display:inline-block;font-size:10px;font-weight:800;padding:1px 7px;border-radius:8px;color:#fff;
+    background:var(--pri);margin-left:4px;vertical-align:middle}
+  .mtag.ot{background:var(--red)} .mtag.dk{background:var(--amber)} .mtag.bk{background:var(--teal)}
+</style>
+</head>
+<body>
+<div id="lock" class="lock">
+  <div class="lockbox">
+    <div class="locklogo">课</div>
+    <div class="lockt">课时表提醒</div>
+    <div class="locks">本应用为付费产品，请输入分发者提供的授权码后使用。<br>仅文件无法使用，必须配合授权码。</div>
+    <input id="actInput" class="lockin" placeholder="授权码（如 0001-A1B2C3）" autocomplete="off" spellcheck="false">
+    <button id="actBtn" class="lockbtn">激活并使用</button>
+    <div id="actErr" class="lockerr">授权码无效，请向分发者获取。</div>
+    <div class="locknote">未购买？请向分发者获取授权码。<br>每个授权码对应一位使用者，文件单独转发无效。</div>
+  </div>
+</div>
+<div class="app">
+  <div class="top">
+    <div class="brand">
+      <div class="logo">课</div>
+      <div>
+        <div class="appname">课时表提醒</div>
+        <div class="date" id="dateStr"></div>
+      </div>
+      <div class="help" id="helpBtn">?</div>
+    </div>
+    <div class="greet"><span id="greet">今日课表</span><span class="wd" id="weekday"></span><span class="stat-pill" id="weekStat"></span></div>
+    <div class="next" id="nextLine"></div>
+  </div>
+
+  <!-- 今日 -->
+  <section class="tab active" id="tab-today">
+    <div id="todayList"></div>
+  </section>
+
+  <!-- 课表 -->
+  <section class="tab" id="tab-week">
+    <div class="daybar" id="dayBar"></div>
+    <div class="sectitle">当天课节 <span class="count" id="weekCount"></span></div>
+    <div id="weekList"></div>
+  </section>
+
+  <!-- 统计 -->
+  <section class="tab" id="tab-stat">
+    <div class="chartcard">
+      <div class="sectitle">本周课时分布 <span class="count" id="weekTotal"></span></div>
+      <div class="barchart" id="barChart"></div>
+    </div>
+    <div class="statcard">
+      <div class="sectitle">薪酬统计 <span class="count">加班按周·代课/其他实时</span></div>
+      <div class="statgrid">
+        <div class="st"><div class="sv" id="stOtWeekly">¥0</div><div class="sl">每周加班薪</div></div>
+        <div class="st"><div class="sv" id="stOtCum">¥0</div><div class="sl">加班累计</div></div>
+        <div class="st"><div class="sv" id="stDkFee">¥0</div><div class="sl">代课实时</div></div>
+        <div class="st"><div class="sv" id="stQtFee">¥0</div><div class="sl">其他实时</div></div>
+      </div>
+      <div class="sectitle" style="margin-top:14px">薪酬分布（按属性累计）</div>
+      <div class="barchart" id="feeChart"></div>
+    </div>
+    <div class="statcard">
+      <div class="sectitle">累计实发薪酬 <span class="count">加班按周 + 代课/其他实时</span></div>
+      <div class="statgrid">
+        <div class="st big"><div class="sv" id="stEarned">¥0</div><div class="sl">总薪酬累计</div></div>
+        <div class="st"><div class="sv" id="stEarnedMonth">¥0</div><div class="sl">本月实发</div></div>
+        <div class="st"><div class="sv" id="stLedgerCnt">0</div><div class="sl">记账笔数</div></div>
+      </div>
+      <div class="sectitle" style="margin-top:14px">记账历史 <span class="count">点 🗑 可删除</span></div>
+      <div id="ledgerList"></div>
+    </div>
+  </section>
+
+  <!-- 设置 -->
+  <section class="tab" id="tab-set">
+    <div class="setgrp">
+      <div class="setrow">
+        <div><div class="l">默认提前提醒</div><div class="d">未单独设置时生效</div></div>
+        <div class="stepper">
+          <button id="rmMinus">−</button>
+          <input id="rmVal" type="number" value="5" inputmode="numeric">
+          <span class="u">分钟</span>
+          <button id="rmPlus">+</button>
+        </div>
+      </div>
+      <div class="setrow">
+        <div><div class="l">学期起始日</div><div class="d">动态求和起点，默认本周一</div></div>
+        <input class="inp" id="termStart" type="date" style="width:auto">
+      </div>
+      <div class="setrow">
+        <div><div class="l">响铃方式</div><div class="d">提醒时的提示音</div></div>
+        <select class="inp" id="ringSel">
+          <option value="chime">清脆风铃</option>
+          <option value="bell">上课铃</option>
+          <option value="soft">柔和提示</option>
+          <option value="none">静音</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="setgrp">
+      <div class="setrow">
+        <div><div class="l">微信推送（Server酱）</div><div class="d">每日汇总 + 每节课前推送到微信</div></div>
+        <label class="sw"><input type="checkbox" id="wx_on"><span class="sl"></span></label>
+      </div>
+      <div class="field" style="border-bottom:1px solid var(--line)"><label>SendKey（方糖 sctapi.ftqq.com 领取）</label>
+        <div class="line"><input class="inp" id="wx_key" placeholder="SCTxxxxxxxxxxxxxxxxxxxx" style="flex:1"></div>
+        <div class="hint">微信扫码登录 sctapi.ftqq.com，复制 SendKey 填入。免费版每日限 5 条，课节多建议升级套餐。</div>
+      </div>
+      <div class="field" style="border-bottom:none;padding-bottom:4px"><label>每日汇总推送时间（推送当天全部课程）</label>
+        <div class="line"><input class="inp" id="wx_time" type="time" value="08:00" style="flex:1"><span style="color:var(--sub);font-weight:800;font-size:12px">每天此时发</span></div>
+      </div>
+    </div>
+
+    <div class="setgrp">
+      <div class="setrow"><div><div class="l">应用内横幅</div><div class="d">页面顶部弹出提醒</div></div>
+        <label class="sw"><input type="checkbox" id="pu_banner" checked><span class="sl"></span></label></div>
+      <div class="setrow"><div><div class="l">声音提醒</div><div class="d">播放提示音</div></div>
+        <label class="sw"><input type="checkbox" id="pu_sound" checked><span class="sl"></span></label></div>
+      <div class="setrow"><div><div class="l">手机震动</div><div class="d">需添加到主屏后更稳</div></div>
+        <label class="sw"><input type="checkbox" id="pu_vibrate" checked><span class="sl"></span></label></div>
+      <div class="setrow"><div><div class="l">系统通知</div><div class="d">浏览器推送通知</div></div>
+        <label class="sw"><input type="checkbox" id="pu_notify"><span class="sl"></span></label></div>
+    </div>
+
+    <div class="setgrp">
+      <div class="setrow" id="helpRow" style="cursor:pointer"><div><div class="l">使用帮助</div><div class="d">新手三步 + 多人独立使用说明</div></div>
+        <span style="font-size:20px;color:var(--pri)">❓</span></div>
+      <div class="setrow" id="testRow" style="cursor:pointer"><div><div class="l">试一下提醒</div><div class="d">立即体验全部推送方式</div></div>
+        <span style="font-size:20px;color:var(--pri)">▶</span></div>
+      <div class="setrow" id="permRow" style="cursor:pointer"><div><div class="l">开启系统通知</div><div class="d" id="permTxt">点击授权浏览器通知</div></div>
+        <span style="font-size:18px;color:var(--pri)">🔔</span></div>
+      <div class="setrow" id="clearRow" style="cursor:pointer"><div><div class="l">清空全部课节</div><div class="d">谨慎操作，不可恢复</div></div>
+        <span style="font-size:18px;color:var(--red)">🗑</span></div>
+    </div>
+    <div class="hint" style="padding:0 6px 20px">💡 多人独立使用：数据只存在<b>你自己的设备</b>（手机/浏览器），无需账号、互不干扰。在手机浏览器打开后「添加到主屏幕」，即可像 App 一样使用；页面保持打开才能在后台到点提醒。部署到网址后可离线并接收系统通知。</div>
+  </section>
+
+  <button class="fab" id="fab">＋</button>
+  <nav class="nav">
+    <div class="it on" data-tab="today"><span class="ic">📅</span>今日</div>
+    <div class="it" data-tab="week"><span class="ic">🗓</span>课表</div>
+    <div class="it" data-tab="stat"><span class="ic">📊</span>统计</div>
+    <div class="it" data-tab="set"><span class="ic">⚙️</span>设置</div>
+  </nav>
+</div>
+
+<!-- Add/Edit Modal -->
+<div class="mask" id="mask">
+  <div class="sheet">
+    <h3 id="sheetTitle">添加课节</h3>
+    <div class="sub">填写这一节课的信息，可单独设置提醒时间</div>
+    <div class="field"><label>星期</label><div class="line">
+      <select class="inp" id="f_day"></select></div></div>
+    <div class="field"><label>节次名称</label><div class="line">
+      <input class="inp" id="f_period" placeholder="如：第1节 / 早读"></div></div>
+    <div class="field"><label>上课时间</label><div class="line">
+      <input class="inp" id="f_start" type="time" value="08:00" style="flex:1">
+      <span style="color:var(--sub);font-weight:800">至</span>
+      <input class="inp" id="f_end" type="time" value="08:45" style="flex:1"></div></div>
+    <div class="field"><label>科目</label><div class="line">
+      <input class="inp" id="f_subject" placeholder="如：数学"></div></div>
+    <div class="field"><label>班级 / 对象</label><div class="line">
+      <input class="inp" id="f_class" placeholder="如：三(2)班"></div></div>
+    <div class="field"><label>地点</label><div class="line">
+      <input class="inp" id="f_loc" placeholder="如：教学楼302"></div></div>
+    <div class="field"><label>课节属性</label><div class="line">
+      <select class="inp" id="f_type" onchange="updateFeeVisibility()"><option value="正常">正常</option><option value="加班">加班</option><option value="代课">代课</option><option value="其他">其他</option></select></div></div>
+    <div class="field" id="fieldFee"><label>课酬 / 费用（元）</label><div class="line">
+      <input class="inp" id="f_fee" type="number" inputmode="decimal" placeholder="0"></div></div>
+    <div class="field"><label>提前提醒（分钟，留空用默认）</label><div class="line">
+      <input class="inp" id="f_remind" type="number" inputmode="numeric" placeholder="默认"></div></div>
+    <button class="btn btn-pri" id="saveBtn">保存</button>
+    <button class="btn btn-ghost" id="cancelBtn">取消</button>
+  </div>
+</div>
+
+<!-- 操作手册（内置） -->
+<div class="mask manual-mask" id="manualMask">
+  <div class="manual">
+    <div class="manual-head"><span>📘 课时表提醒 · 操作手册</span><span class="x" onclick="showManual(false)">✕</span></div>
+    <div class="manual-body">
+      <div class="mcard">
+        <h4><span class="em">📌</span>这是一款什么工具</h4>
+        <p><b>课时表提醒</b>帮你管好每周课表，并在每节课前准时提醒；还能记下每一节课的课酬，自动算出<b>累计实发工资</b>。</p>
+        <p>它不用去应用商店下载，<b>装到手机桌面就能当 App 用</b>，数据只存在你自己的手机里，<b>不用注册、断网也能看</b>。</p>
+        <p>底部四个按钮：<b>今日</b>（今天的课 + 记账）、<b>课表</b>（排整周的课）、<b>统计</b>（图表 + 累计工资）、<b>设置</b>（提醒 / 微信 / 帮助）。</p>
+      </div>
+      <div class="mcard">
+        <h4><span class="em">📲</span>安装与激活</h4>
+        <div class="mstep"><b>1</b><div>用手机浏览器打开应用 → 点右上角「分享」→ 选「<b>添加到主屏幕</b>」→ 桌面出现「课时表提醒」图标，点开即用。</div></div>
+        <div class="mstep"><b>2</b><div>第一次打开要填<b>授权码</b>（如 <code>0001-A1B2C3</code>）→ 点「激活并使用」。授权码会<b>自动记住</b>，以后不用再填。</div></div>
+        <div class="mnote"><b>一个授权码一人用：</b>这是付费工具，每个授权码只对应一位使用者。只转发安装文件、没有授权码是打不开的。授权码丢了，找发给您的人补发即可。</div>
+      </div>
+      <div class="mcard">
+        <h4><span class="em">➕</span>添加 / 修改课节</h4>
+        <p>在「课表」页，或点右下角「<b>＋</b>」添加一节课：填 <span class="k">星期</span>（周一到周日）、<span class="k">第几节</span>、<span class="k">起止时间</span>、<span class="k">科目</span>、<span class="k">班级</span>、<span class="k">地点</span>。</p>
+        <p>「<b>课节属性</b>」决定要不要填课酬：选<span class="mtag">正常</span>就不填；选<span class="mtag ot">加班</span><span class="mtag dk">代课</span><span class="mtag bk">其他</span>会多出「课酬 / 费用」一栏。点课节卡片可改，点「✕」可删。</p>
+        <div class="mnote">正常课、加班课会算进"每周重复课表"和课时分布图；代课、其他算临时课，不进每周课表，但照样能记工资。</div>
+      </div>
+      <div class="mcard">
+        <h4><span class="em">⏰</span>设置上课提醒</h4>
+        <p>在「设置」里调：<b>提前几分钟提醒</b>、<b>响铃方式</b>，以及要不要开<b>横幅 / 声音 / 震动 / 系统通知</b>。点「试一下提醒」能马上听到效果。每一节课也能单独设提前量。</p>
+        <div class="mnote">提醒靠应用后台运行，<b>应用保持打开</b>才能到点响铃；装到桌面后震动和通知最稳。</div>
+      </div>
+      <div class="mcard">
+        <h4><span class="em">💰</span>记账与累计实发工资</h4>
+        <p>课节按<b>属性</b>决定怎么算工资：<span class="mtag">正常</span>没有工资；<span class="mtag ot">加班</span>是每周固定重复课，系统按「每周加班薪 × 经过周数」<b>自动累加</b>，不用手点；<span class="mtag dk">代课</span><span class="mtag bk">其他</span>是临时课，上完在「今日」页点橙色「<b>记一笔 ¥X</b>」才实时计入（再点取消，🗑 可删）。</p>
+        <p>「设置」里可改<b>学期起始日</b>（默认本周一），它决定"从第几周开始算"——过了几周，加班工资就自动翻几倍。</p>
+        <div class="mnote"><b>总工资 = 加班按周累加 + 代课实时 + 其他实时。</b>正常课不计工资；加班是重复课自动算，不是逐节记；只有代课 / 其他需要你每节"记一笔"。</div>
+      </div>
+      <div class="mcard">
+        <h4><span class="em">📊</span>统计看板</h4>
+        <p><b>本周课时分布</b>：按星期显示每天几节课（共 N 节）。</p>
+        <p><b>薪酬统计</b>：每周加班薪 / 加班累计(×N周) / 代课实时 / 其他实时，外加按属性累计的柱状图。</p>
+        <p><b>累计实发工资</b>：总工资累计 / 本月实发 / 记账笔数，下面还有每一笔记账明细。累计实发请到「统计」页查看。</p>
+      </div>
+      <div class="mcard">
+        <h4><span class="em">🔔</span>微信推送（可选）</h4>
+        <p>想让微信也收到提醒？在「设置 → 微信推送」打开开关，填一个 <b>Server酱 SendKey</b>（去 <code>sctapi.ftqq.com</code> 免费领）。每天固定时间（默认 08:00）会推当天全部课程，每节课前再分条推送。免费版每天最多 5 条。</p>
+      </div>
+      <div class="mcard">
+        <h4><span class="em">❓</span>常见问题</h4>
+        <ul>
+          <li><b>收不到提醒？</b>应用要保持打开；想用震动 / 通知最好先装到桌面；系统通知要点「开启系统通知」允许一下。</li>
+          <li><b>换手机了？</b>数据存在本机浏览器，换设备不会自动过去；但授权码可以在新手机上重新激活使用。</li>
+          <li><b>改了课表，累计工资会变吗？</b>不会，累计只认"记一笔"这一动作。</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="banner" id="banner">
+  <div class="bt">⏰ 上课提醒</div>
+  <div class="bb" id="bSub">数学</div>
+  <div class="bc" id="bMeta">三(2)班 · 教学楼302 · 08:00 开始</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const WD=["周日","周一","周二","周三","周四","周五","周六"];
+const DOW={1:"周一",2:"周二",3:"周三",4:"周四",5:"周五",6:"周六",7:"周日"};
+const DAYS=[1,2,3,4,5,6,7];
+const PRI=["#5b6ef5","#19c4b8","#ffab40","#ff5d6c","#8b7bf6","#33c46b","#f471b5"];
+const KEY="kebiao_reminder_v1";
+let state=load();
+let editingId=null, weekSel=null, reminded=new Set();
+
+function load(){
+  let s=null;
+  try{const p=JSON.parse(localStorage.getItem(KEY));if(p&&p.schedule)s=p;}catch(e){}
+  if(!s){
+    s={schedule:seed(),settings:{defaultRemindMin:5,ring:"chime",
+      push:{banner:true,sound:true,vibrate:true,notify:false},
+      wechat:{enabled:false,sendkey:"",dailyTime:"08:00"}},ledger:[]};
+  }
+  if(!Array.isArray(s.ledger))s.ledger=[];
+  if(!s.settings)s.settings={};
+  // 学期起始日：未设则默认本周一并持久化，确保跨周动态累加生效
+  if(!s.settings.termStart)s.settings.termStart=ymd(mondayOf(new Date()));
+  try{localStorage.setItem(KEY,JSON.stringify(s));}catch(e){}
+  return s;
+}
+function seed(){ // 暂定定稿：清空白启动，无示例课节/示例记账，避免数据污染
+  return [];
+}
+function uid(){return Math.random().toString(36).slice(2,9)}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}}
+
+/* ---------- render ---------- */
+function todayDow(){const d=new Date().getDay();return d===0?7:d}
+function ymd(d){return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate()}
+function mondayOf(d){const x=new Date(d);const day=x.getDay()||7;x.setDate(x.getDate()-day+1);x.setHours(0,0,0,0);return x;}
+function termMonday(){ // 学期起始日对应的周一；未设则用今天所在周一
+  const s=state&&state.settings&&state.settings.termStart;
+  if(s){const p=String(s).split('-').map(Number);if(p.length===3&&!isNaN(p[0])){const d=new Date(p[0],p[1]-1,p[2]);if(!isNaN(d))return mondayOf(d);}}
+  return mondayOf(new Date());
+}
+function weekCount(){ // 从学期起始周一到今天（含当前周）共经历几周
+  const diff=Math.round((mondayOf(new Date())-termMonday())/86400000);
+  return Math.max(1,Math.floor(diff/7)+1);
+}
+function monthWeekCount(){ // 本月内经历的周数（用于本月加班累计）
+  const ms=mondayOf(new Date(new Date().getFullYear(),new Date().getMonth(),1));
+  const start=Math.max(termMonday(),ms);
+  const diff=Math.round((mondayOf(new Date())-start)/86400000);
+  return Math.max(0,Math.floor(diff/7)+1);
+}
+
+function renderHeader(){
+  const n=new Date();
+  document.getElementById("dateStr").textContent=
+    `${n.getFullYear()}年${n.getMonth()+1}月${n.getDate()}日`;
+  document.getElementById("weekday").textContent=WD[n.getDay()];
+  const total=state.schedule.length;
+  document.getElementById("weekStat").textContent= total?`本周 ${total} 节`:"";
+  const hs=document.getElementById("helpBtn");if(hs)hs.onclick=showHelp;
+}
+function renderToday(){
+  const list=document.getElementById("todayList");
+  const dow=todayDow();
+  let items=state.schedule.filter(e=>e.day===dow)
+    .sort((a,b)=>a.start.localeCompare(b.start));
+  if(!items.length){
+    if(state.schedule.length===0){
+      list.innerHTML=`<div class="welcome">
+        <div class="wbig">📚</div>
+        <div class="wt">欢迎使用「课时表提醒」</div>
+        <div class="ws">三步搞定你的专属课表提醒</div>
+        <div class="wstep"><b>1</b> 去「课表」添加每周课节（科目 / 时间 / 班级）</div>
+        <div class="wstep"><b>2</b> 在「设置」设定提前几分钟提醒、声音与震动</div>
+        <div class="wstep"><b>3</b> 想推微信？填 Server酱 SendKey，每天自动汇总</div>
+        <button class="btn btn-pri" onclick="openAdd()">＋ 添加第一节课</button>
+      </div>`;
+    } else {
+      list.innerHTML=`<div class="empty"><div class="big">📭</div>今天没有排课<br>去「课表」添加吧</div>`;
+    }
+    renderNext();return;
+  }
+  const now=new Date(),todayKey=ymd(now);
+  const recItems=state.ledger.filter(e=>e.date===todayKey);
+  const recSum=recItems.reduce((s,e)=>s+e.fee,0);
+  const feeLessons=items.filter(e=>(+e.fee>0)&&((e.type||"正常")==="代课"||(e.type||"正常")==="其他"));
+  const allRec=feeLessons.length>0&&feeLessons.every(e=>recItems.find(r=>r.lessonId===e.id));
+  const recbar=`<div class="recbar"><div class="rb-l">今日已记 <b>${recItems.length}</b> 笔 · 实发 <b>¥${recSum}</b></div>${feeLessons.length?`<button class="rb-r" data-all="1">${allRec?"已全记":"一键记全部"}</button>`:""}</div>`;
+  list.innerHTML=recbar+items.map(e=>{
+    const [sh,sm]=e.start.split(":").map(Number);
+    const [eh,em]=e.end.split(":").map(Number);
+    const st=new Date(now);st.setHours(sh,sm,0,0);
+    const et=new Date(now);et.setHours(eh,em,0,0);
+    let stat="wait",stxt="未开始",cd="";
+    if(now>et){stat="done";stxt="已结束"}
+    else if(now>=st){stat="now";stxt="进行中"}
+    else{
+      const diff=Math.round((st-now)/60000);
+      const rm=e.remind!=null?e.remind:state.settings.defaultRemindMin;
+      const rd=diff-rm;
+      cd=rd>0?`${rd} 分钟后提醒（提前 ${rm} 分）`:`即将提醒`;
+    }
+    const c=PRI[(e.day*3+e.period.length)%PRI.length];
+    const tp=e.type||"正常";
+    const tagClass=tp==="加班"?"tag-ot":tp==="代课"?"tag-dk":tp==="其他"?"tag-bk":"";
+    const tag=tp!=="正常"?`<span class="tag ${tagClass}">${tp}</span>`:"";
+    const meta=[e.cls&&`👥 ${e.cls}`,e.loc&&`📍 ${e.loc}`,
+      (e.fee&&tp==="加班")?`💰 ¥${e.fee}/周·自动`:(e.fee?`💰 ¥${e.fee}`:"")].filter(Boolean).join("  ");
+    const isTemp=(tp==="代课"||tp==="其他")&&(+e.fee>0);
+    const rec=isTemp?state.ledger.find(l=>l.date===todayKey&&l.lessonId===e.id):null;
+    return `<div class="pcard" data-id="${e.id}">
+      <div class="bar" style="background:${c}"></div>
+      <div class="main">
+        <div class="tm">${e.start} – ${e.end} · ${e.period}</div>
+        <div class="sb">${e.subject||"未命名"}${tag}</div>
+        ${meta?`<div class="meta">${meta}</div>`:""}
+        ${cd?`<div class="cd">⏱ ${cd}</div>`:""}
+        ${rec!==null?`<button class="recbtn ${rec?'on':''}" data-rec="${e.id}">${rec?'✓ 已记 ¥'+e.fee:'记一笔 ¥'+e.fee}</button>`:""}
+      </div>
+      <div class="stat st-${stat}">${stxt}</div>
+    </div>`;
+  }).join("");
+  list.querySelectorAll(".pcard").forEach(c=>c.onclick=()=>openEdit(c.dataset.id));
+  list.querySelectorAll(".recbtn").forEach(b=>b.onclick=(ev)=>{ev.stopPropagation();recordToggle(b.dataset.rec);});
+  list.querySelectorAll(".recbar .rb-r").forEach(b=>b.onclick=recordAllToday);
+  renderNext();
+}
+function renderNext(){
+  const dow=todayDow(),now=new Date();
+  let items=state.schedule.filter(e=>e.day===dow).sort((a,b)=>a.start.localeCompare(b.start));
+  let nx=items.find(e=>{const[sh,sm]=e.start.split(":").map(Number);const st=new Date(now);st.setHours(sh,sm,0,0);return st>now;});
+  const el=document.getElementById("nextLine");
+  if(nx){const[sh,sm]=nx.start.split(":").map(Number);const st=new Date(now);st.setHours(sh,sm,0,0);
+    const m=Math.round((st-now)/60000);
+    el.innerHTML=`下一节：<b>${nx.subject}</b>${nx.cls?` · ${nx.cls}`:""} · 还有 <b>${m}</b> 分钟`;}
+  else el.innerHTML=`今日课程已全部结束 🎉`;
+}
+function isRecur(e){return (e.type||"正常")==="正常"||(e.type||"正常")==="加班";}
+function renderWeek(){
+  if(weekSel==null)weekSel=todayDow();
+  // 星期选择条（仅统计“重复课”：正常+加班；代课/其他属临时课，不计入每周重复课表）
+  const bar=document.getElementById("dayBar");
+  bar.innerHTML=DAYS.map(d=>{
+    const on=d===weekSel?"on":"";
+    const cnt=state.schedule.filter(e=>e.day===d&&isRecur(e)).length;
+    return `<div class="chip ${on}" data-d="${d}">${DOW[d]}${cnt?`<br><span style="font-size:10px;opacity:.8">${cnt}节</span>`:""}</div>`;
+  }).join("");
+  bar.querySelectorAll(".chip").forEach(c=>c.onclick=()=>{weekSel=+c.dataset.d;renderWeek();});
+  const items=state.schedule.filter(e=>e.day===weekSel).sort((a,b)=>a.start.localeCompare(b.start));
+  document.getElementById("weekCount").textContent=`共 ${items.length} 节`;
+  const list=document.getElementById("weekList");
+  if(!items.length){list.innerHTML=`<div class="empty"><div class="big">🗒</div>这天还没排课</div>`;return}
+  list.innerHTML=items.map(e=>{
+    const c=PRI[(e.day*3+e.period.length)%PRI.length];
+    const rm=e.remind!=null?`提前${e.remind}分`:`默认${state.settings.defaultRemindMin}分`;
+    const tp=e.type||"正常";
+    const tagClass=tp==="加班"?"tag-ot":tp==="代课"?"tag-dk":tp==="其他"?"tag-bk":"";
+    const tag=tp!=="正常"?`<span class="tag ${tagClass}">${tp}</span>`:"";
+    const fee=e.fee?` · ¥${e.fee}`:"";
+    return `<div class="row" data-id="${e.id}">
+      <div class="dot" style="background:${c}"></div>
+      <div class="info"><div class="a">${e.subject||"未命名"} · ${e.period}${tag}</div>
+        <div class="b">${e.cls||""}${e.cls&&e.loc?" · ":""}${e.loc||""} · ${rm}${fee}</div></div>
+      <div class="tm">${e.start}<br>${e.end}</div>
+      <div class="del" data-del="${e.id}">✕</div>
+    </div>`;
+  }).join("");
+  list.querySelectorAll(".row").forEach(r=>{
+    r.onclick=(ev)=>{if(ev.target.dataset.del)return;openEdit(r.dataset.id);};
+  });
+  list.querySelectorAll(".del").forEach(d=>d.onclick=(ev)=>{
+    ev.stopPropagation();const id=d.dataset.del;
+    state.schedule=state.schedule.filter(e=>e.id!==id);save();renderWeek();toast("已删除");
+  });
+}
+function renderStat(){
+  document.getElementById("weekTotal").textContent= state.schedule.length?`共 ${state.schedule.length} 节`:"";
+  // 本周课时分布柱状图（按星期统计全部课节）
+  const counts=DAYS.map(d=>state.schedule.filter(e=>e.day===d).length);
+  const max=Math.max(1,...counts);
+  document.getElementById("barChart").innerHTML=DAYS.map((d,i)=>{
+    const c=counts[i];
+    const h=c?Math.round(c/max*64)+4:3;
+    return `<div class="bc"><span class="bv">${c||""}</span><div class="bar" style="height:${h}px"></div><span class="bl">${DOW[d]}</span></div>`;
+  }).join("");
+  // 薪酬统计：正常无薪资；加班按周自动累加；代课/其他实时记录
+  const weeks=weekCount();
+  const otWeekly=state.schedule.filter(e=>(e.type||"正常")==="加班").reduce((s,e)=>s+(+e.fee||0),0);
+  const otCum=otWeekly*weeks;
+  const led=state.ledger||[];
+  const dkCum=led.filter(e=>e.type==="代课").reduce((s,e)=>s+e.fee,0);
+  const qtCum=led.filter(e=>e.type==="其他").reduce((s,e)=>s+e.fee,0);
+  const total=otCum+dkCum+qtCum;
+  document.getElementById("stOtWeekly").textContent="¥"+otWeekly;
+  document.getElementById("stOtCum").textContent="¥"+otCum;
+  document.getElementById("stDkFee").textContent="¥"+dkCum;
+  document.getElementById("stQtFee").textContent="¥"+qtCum;
+  // 薪酬分布柱状图（按属性累计：加班/代课/其他）
+  const feeTypes=[["加班",otCum],["代课",dkCum],["其他",qtCum]].filter(x=>x[1]>0);
+  const fmax=Math.max(1,...feeTypes.map(x=>x[1]));
+  document.getElementById("feeChart").innerHTML=feeTypes.length?feeTypes.map(([n,v])=>{
+    const h=Math.round(v/fmax*64)+4;
+    return `<div class="bc"><span class="bv">¥${v}</span><div class="bar" style="height:${h}px"></div><span class="bl">${n}</span></div>`;
+  }).join(""):`<div style="text-align:center;color:var(--sub);font-size:12px;padding:16px 0">暂无课酬数据</div>`;
+  // 累计实发薪酬：总薪酬 = 加班按周 + 代课实时 + 其他实时
+  const ym=ymd(new Date()).slice(0,7);
+  const otMonth=otWeekly*monthWeekCount();
+  const dkMonth=led.filter(e=>e.type==="代课"&&e.date.slice(0,7)===ym).reduce((s,e)=>s+e.fee,0);
+  const qtMonth=led.filter(e=>e.type==="其他"&&e.date.slice(0,7)===ym).reduce((s,e)=>s+e.fee,0);
+  const monthTotal=otMonth+dkMonth+qtMonth;
+  document.getElementById("stEarned").textContent="¥"+total;
+  document.getElementById("stEarnedMonth").textContent="¥"+monthTotal;
+  document.getElementById("stLedgerCnt").textContent=led.length;
+  renderLedger();
+}
+function renderSettings(){
+  document.getElementById("rmVal").value=state.settings.defaultRemindMin;
+  document.getElementById("termStart").value=state.settings.termStart||ymd(mondayOf(new Date()));
+  document.getElementById("ringSel").value=state.settings.ring;
+  document.getElementById("pu_banner").checked=state.settings.push.banner;
+  document.getElementById("pu_sound").checked=state.settings.push.sound;
+  document.getElementById("pu_vibrate").checked=state.settings.push.vibrate;
+  document.getElementById("pu_notify").checked=state.settings.push.notify;
+  document.getElementById("wx_on").checked=state.settings.wechat.enabled;
+  document.getElementById("wx_key").value=state.settings.wechat.sendkey;
+  document.getElementById("wx_time").value=state.settings.wechat.dailyTime;
+  const pt=document.getElementById("permTxt");
+  if(!("Notification"in window))pt.textContent="此浏览器不支持";
+  else if(Notification.permission==="granted")pt.textContent="已授权 ✓";
+  else if(Notification.permission==="denied")pt.textContent="已被拒绝，需浏览器设置";
+  else pt.textContent="点击授权浏览器通知";
+}
+
+/* ---------- modal ---------- */
+function openAdd(){editingId=null;document.getElementById("sheetTitle").textContent="添加课节";
+  if(weekSel==null)weekSel=todayDow();
+  const f=document.getElementById("f_day");f.innerHTML=DAYS.map(d=>`<option value="${d}"${d===weekSel?" selected":""}>${DOW[d]}</option>`).join("");
+  ["f_period","f_subject","f_class","f_loc","f_remind"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("f_type").value="正常";
+  document.getElementById("f_fee").value="";
+  updateFeeVisibility();
+  document.getElementById("f_start").value="08:00";document.getElementById("f_end").value="08:45";
+  showMask(true);
+}
+function openEdit(id){const e=state.schedule.find(x=>x.id===id);if(!e)return;editingId=id;
+  document.getElementById("sheetTitle").textContent="编辑课节";
+  const f=document.getElementById("f_day");f.innerHTML=DAYS.map(d=>`<option value="${d}"${d===e.day?" selected":""}>${DOW[d]}</option>`).join("");
+  document.getElementById("f_period").value=e.period||"";
+  document.getElementById("f_start").value=e.start;document.getElementById("f_end").value=e.end;
+  document.getElementById("f_subject").value=e.subject||"";
+  document.getElementById("f_class").value=e.cls||"";document.getElementById("f_loc").value=e.loc||"";
+  document.getElementById("f_type").value=e.type||"正常";
+  document.getElementById("f_fee").value=e.fee==null?"":e.fee;
+  updateFeeVisibility();
+  document.getElementById("f_remind").value=e.remind==null?"":e.remind;
+  showMask(true);
+}
+function saveEdit(){
+  const day=+document.getElementById("f_day").value;
+  const period=document.getElementById("f_period").value.trim();
+  const start=document.getElementById("f_start").value,end=document.getElementById("f_end").value;
+  const subject=document.getElementById("f_subject").value.trim();
+  const cls=document.getElementById("f_class").value.trim();
+  const loc=document.getElementById("f_loc").value.trim();
+  const type=document.getElementById("f_type").value;
+  let fee=document.getElementById("f_fee").value.trim();
+  fee=fee===""?0:Math.max(0,parseFloat(fee)||0);
+  if(type==="正常")fee=0;
+  let remind=document.getElementById("f_remind").value.trim();
+  remind=remind===""?null:Math.max(0,parseInt(remind)||0);
+  if(!period&&!subject){toast("请至少填写节次或科目");return}
+  if(start>=end){toast("结束时间需晚于开始");return}
+  if(editingId){const e=state.schedule.find(x=>x.id===editingId);Object.assign(e,{day,period,start,end,subject,cls,loc,type,fee,remind});}
+  else{
+    if(state.schedule.length>=DEMO_MAX){toast("体验版最多添加 "+DEMO_MAX+" 节课，完整版请输入授权码解锁");return}
+    state.schedule.push({id:uid(),day,period,start,end,subject,cls,loc,type,fee,remind});
+  }
+  save();showMask(false);renderToday();renderWeek();renderStat();  toast(editingId?"已更新":"已添加");editingId=null;
+}
+function showMask(s){document.getElementById("mask").classList.toggle("show",s)}
+function updateFeeVisibility(){
+  const t=document.getElementById("f_type").value;
+  const show=t!=="正常";
+  const ff=document.getElementById("fieldFee");
+  if(ff)ff.style.display=show?"":"none";
+  if(!show)document.getElementById("f_fee").value="";
+}
+/* ---------- 记账 / 累计实发 ---------- */
+function recordToggle(lessonId){
+  const today=ymd(new Date());
+  const ex=state.ledger.find(e=>e.date===today&&e.lessonId===lessonId);
+  if(ex){state.ledger=state.ledger.filter(e=>e.id!==ex.id);toast("已取消该笔记账");}
+  else{
+    const e=state.schedule.find(x=>x.id===lessonId);if(!e)return;
+    if(!(+e.fee>0)){toast("该课无课酬，无需记账");return;}
+    const tp=e.type||"正常";
+    if(tp==="加班"){toast("加班为重复课，按周自动计入，无需逐节记");return;}
+    state.ledger.push({id:uid(),date:today,lessonId,subject:e.subject||"未命名",cls:e.cls||"",type:e.type||"正常",fee:+e.fee,ts:Date.now()});
+    toast("已记一笔 +¥"+e.fee);
+  }
+  save();renderToday();renderStat();}
+function recordAllToday(){
+  const today=ymd(new Date()),dow=todayDow();
+  let n=0;
+  state.schedule.filter(e=>e.day===dow&&(+e.fee>0)&&((e.type||"正常")==="代课"||(e.type||"正常")==="其他")).forEach(e=>{
+    if(!state.ledger.find(l=>l.date===today&&l.lessonId===e.id)){
+      state.ledger.push({id:uid(),date:today,lessonId:e.id,subject:e.subject||"未命名",cls:e.cls||"",type:e.type||"正常",fee:+e.fee,ts:Date.now()});
+      n++;
+    }
+  });
+  save();renderToday();renderStat();  toast(n?`已记今日全部有酬课 ${n} 笔`:"今日有酬课已全部记账");
+}
+function delLedger(id){
+  state.ledger=state.ledger.filter(e=>e.id!==id);save();renderStat();toast("已删除该笔");
+}
+function renderLedger(){
+  const el=document.getElementById("ledgerList");if(!el)return;
+  const led=(state.ledger||[]).slice().sort((a,b)=>b.ts-a.ts);
+  if(!led.length){el.innerHTML=`<div class="empty sm">还没有记账记录<br>在「今日」页上完课点"记一笔"即可累加实发薪酬</div>`;return;}
+  el.innerHTML=led.map(e=>{
+    const tp=e.type||"正常";
+    const tagClass=tp==="加班"?"tag-ot":tp==="代课"?"tag-dk":tp==="其他"?"tag-bk":"";
+    return `<div class="lg" data-id="${e.id}">
+      <div class="lgm"><div class="lgs">${e.subject||"未命名"} ${tp!=="正常"?`<span class="tag ${tagClass}">${tp}</span>`:""}</div>
+      <div class="lgd">${e.date}${e.cls?" · "+e.cls:""}</div></div>
+      <div class="lgf">¥${e.fee}</div>
+      <button class="lgdel" data-del="${e.id}">🗑</button>
+    </div>`;
+  }).join("");
+  el.querySelectorAll(".lgdel").forEach(b=>b.onclick=(ev)=>{ev.stopPropagation();delLedger(b.dataset.del);});
+}
+function showManual(s){document.getElementById("manualMask").classList.toggle("show",!!s)}
+function showHelp(s){showManual(s)}
+
+/* ---------- reminder engine ---------- */
+function check(){
+  const now=new Date(),dow=todayDow(),key=ymd(now);
+  state.schedule.filter(e=>e.day===dow).forEach(e=>{
+    const[sh,sm]=e.start.split(":").map(Number);
+    const[eh,em]=e.end.split(":").map(Number);
+    const st=new Date(now);st.setHours(sh,sm,0,0);
+    const et=new Date(now);et.setHours(eh,em,0,0);
+    const rm=e.remind!=null?e.remind:state.settings.defaultRemindMin;
+    const rt=new Date(st.getTime()-rm*60000);
+    const tag=e.id+"_"+key;
+    if(now>=rt&&now<=et&&!reminded.has(tag)){reminded.add(tag);fire(e);}
+  });
+}
+function fire(e){
+  const p=state.settings.push;
+  const title=`${e.subject||"课程"} · ${e.period}`;
+  const body=`${e.cls||""} ${e.loc||""} ${e.start} 开始`.trim();
+  if(p.banner)showBanner(title,body);
+  if(p.sound)playRing(state.settings.ring);
+  if(p.vibrate&&navigator.vibrate)navigator.vibrate([180,90,180,90,260]);
+  if(p.notify&&"Notification"in window&&Notification.permission==="granted"){
+    try{new Notification("⏰ 上课提醒 · "+title,{body});}catch(_){}
+  }
+  if(p.banner||p.sound||p.vibrate) {/* visual only */}
+  pushWechat("⏰ 上课提醒 · "+title,
+    `${e.cls||""} ${e.loc||""}\n上课时间：${e.start}–${e.end}\n提前 ${e.remind!=null?e.remind:state.settings.defaultRemindMin} 分钟提醒`);
+}
+function pushWechat(title,desp){
+  const w=state.settings.wechat;
+  if(!w.enabled||!w.sendkey)return;
+  const fd=new URLSearchParams();fd.set("title",title);fd.set("desp",desp||"");
+  fetch("https://sctapi.ftqq.com/"+w.sendkey+".send",{
+    method:"POST",body:fd,headers:{"Content-Type":"application/x-www-form-urlencoded"}
+  }).then(r=>r.json()).then(j=>{if(j&&j.code!==0)console.warn("Server酱推送失败",j);})
+    .catch(e=>console.warn("Server酱推送异常",e));
+}
+/* 每日汇总推送到微信 */
+let dailyTimer=null,dailyInt=null,dailyPushedKey=null;
+function dailySummary(){
+  const w=state.settings.wechat;if(!w.enabled||!w.sendkey)return;
+  const n=new Date(),dow=todayDow();
+  const items=state.schedule.filter(e=>e.day===dow).sort((a,b)=>a.start.localeCompare(b.start));
+  const body=items.length?items.map(e=>
+    `> **${e.start}–${e.end}** ｜ ${e.period} ｜ ${e.subject||""}${e.cls?" ｜ "+e.cls:""}${e.loc?" ｜ "+e.loc:""}`
+  ).join("\n\n"):"今日无排课 📭";
+  pushWechat(`📅 ${n.getMonth()+1}月${n.getDate()}日 ${WD[n.getDay()]} 课程安排`,body);
+}
+function setupDaily(){
+  clearTimeout(dailyTimer);clearInterval(dailyInt);
+  const fireToday=()=>{const key=ymd(new Date())+"_"+state.settings.wechat.dailyTime;
+    if(dailyPushedKey!==key){dailyPushedKey=key;dailySummary();}};
+  const t=(state.settings.wechat.dailyTime||"08:00").split(":").map(Number);
+  const now=new Date();let target=new Date(now);target.setHours(t[0],t[1],0,0);
+  if(target<=now){fireToday();target.setDate(target.getDate()+1);}
+  dailyTimer=setTimeout(()=>{fireToday();dailyInt=setInterval(fireToday,24*3600*1000);},target-now);
+}
+let bannerTimer;
+function showBanner(title,body){
+  document.getElementById("bSub").textContent=title;
+  document.getElementById("bMeta").textContent=body;
+  const b=document.getElementById("banner");b.classList.add("show");
+  clearTimeout(bannerTimer);bannerTimer=setTimeout(()=>b.classList.remove("show"),8000);
+}
+function playRing(kind){
+  try{
+    const ctx=new (window.AudioContext||window.webkitAudioContext)();
+    const seq=kind==="bell"?[[880,0],[880,.25],[660,.5]]
+      :kind==="soft"?[[523,0],[659,.2],[784,.4]]
+      :kind==="none"?[]:[[1046,0],[1318,.18],[1568,.36]];
+    seq.forEach(([f,t])=>{const o=ctx.createOscillator(),g=ctx.createGain();
+      o.type="sine";o.frequency.value=f;o.connect(g);g.connect(ctx.destination);
+      const s=ctx.currentTime+t;g.gain.setValueAtTime(.0001,s);g.gain.exponentialRampToValueAtTime(.4,s+.02);
+      g.gain.exponentialRampToValueAtTime(.0001,s+.22);o.start(s);o.stop(s+.24);});
+    setTimeout(()=>ctx.close(),1200);
+  }catch(_){}
+}
+let toastTimer;
+function toast(m){const t=document.getElementById("toast");t.textContent=m;t.classList.add("show");
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove("show"),1600);}
+
+/* ---------- nav + events ---------- */
+document.querySelectorAll(".nav .it").forEach(it=>it.onclick=()=>{
+  document.querySelectorAll(".nav .it").forEach(x=>x.classList.remove("on"));
+  it.classList.add("on");
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+  document.getElementById("tab-"+it.dataset.tab).classList.add("active");
+  if(it.dataset.tab==="week")renderWeek();
+  if(it.dataset.tab==="stat")renderStat();
+  if(it.dataset.tab==="set")renderSettings();
+});
+document.getElementById("fab").onclick=openAdd;
+document.getElementById("saveBtn").onclick=saveEdit;
+document.getElementById("cancelBtn").onclick=()=>showMask(false);
+document.getElementById("mask").onclick=(e)=>{if(e.target.id==="mask")showMask(false)};
+document.getElementById("manualMask").onclick=(e)=>{if(e.target.id==="manualMask")showManual(false)};
+document.getElementById("helpRow").onclick=()=>showManual(true);
+document.getElementById("rmMinus").onclick=()=>setRm(state.settings.defaultRemindMin-1);
+document.getElementById("rmPlus").onclick=()=>setRm(state.settings.defaultRemindMin+1);
+document.getElementById("rmVal").onchange=()=>setRm(parseInt(document.getElementById("rmVal").value)||0);
+document.getElementById("termStart").onchange=e=>{state.settings.termStart=e.target.value||ymd(mondayOf(new Date()));save();renderStat();toast("学期起始日已更新");};
+function setRm(v){v=Math.max(0,Math.min(120,v||0));state.settings.defaultRemindMin=v;document.getElementById("rmVal").value=v;save();renderToday();}
+document.getElementById("ringSel").onchange=e=>{state.settings.ring=e.target.value;save();};
+["banner","sound","vibrate","notify"].forEach(k=>{
+  document.getElementById("pu_"+k).onchange=e=>{state.settings.push[k]=e.target.checked;save();};
+});
+document.getElementById("wx_on").onchange=e=>{state.settings.wechat.enabled=e.target.checked;save();setupDaily();toast(e.target.checked?"微信推送已开启":"微信推送已关闭");};
+document.getElementById("wx_key").oninput=e=>{state.settings.wechat.sendkey=e.target.value.trim();save();};
+document.getElementById("wx_time").onchange=e=>{state.settings.wechat.dailyTime=e.target.value;save();setupDaily();toast("每日推送时间已设为 "+e.target.value);};
+document.getElementById("testRow").onclick=()=>{
+  fire({id:"test",day:todayDow(),period:"测试节次",start:"00:00",end:"23:59",subject:"测试课程",cls:"三(2)班",loc:"教学楼302"});
+};
+document.getElementById("permRow").onclick=()=>{
+  if(!("Notification"in window)){toast("此浏览器不支持通知");return;}
+  Notification.requestPermission().then(r=>{renderSettings();toast(r==="granted"?"已授权":"未授权");});
+};
+document.getElementById("clearRow").onclick=()=>{
+  if(confirm("确定清空全部课节？此操作不可恢复。")){state.schedule=[];save();renderToday();renderWeek();toast("已清空");}
+};
+
+/* ---------- 授权激活（纯前端） ---------- */
+var DEMO_MAX=3;
+/* 体验版：不内置授权密钥，明文公开分发 */
+function sha256(message){
+  const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+    0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+    0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+    0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+    0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+    0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+    0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+    0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+  function ror(x,n){return (x>>>n)|(x<<(32-n));}
+  const utf8=unescape(encodeURIComponent(message));
+  const bytes=[]; for(let i=0;i<utf8.length;i++) bytes.push(utf8.charCodeAt(i));
+  const bitLen=bytes.length*8;
+  const msg=bytes.slice(); msg.push(0x80);
+  while(msg.length%64!==56) msg.push(0);
+  const hi=Math.floor(bitLen/4294967296), lo=bitLen>>>0;
+  for(let s=24;s>=0;s-=8) msg.push((hi>>>s)&0xff);
+  for(let s=24;s>=0;s-=8) msg.push((lo>>>s)&0xff);
+  let h0=0x6a09e667,h1=0xbb67ae85,h2=0x3c6ef372,h3=0xa54ff53a,h4=0x510e527f,h5=0x9b05688c,h6=0x1f83d9ab,h7=0x5be0cd19;
+  for(let off=0; off<msg.length; off+=64){
+    const w=new Array(64);
+    for(let i=0;i<16;i++) w[i]=(msg[off+i*4]<<24)|(msg[off+i*4+1]<<16)|(msg[off+i*4+2]<<8)|msg[off+i*4+3];
+    for(let i=16;i<64;i++){
+      const s0=ror(w[i-15],7)^ror(w[i-15],18)^(w[i-15]>>>3);
+      const s1=ror(w[i-2],17)^ror(w[i-2],19)^(w[i-2]>>>10);
+      w[i]=(w[i-16]+s0+w[i-7]+s1)|0;
+    }
+    let a=h0,b=h1,c=h2,d=h3,e=h4,f=h5,g=h6,hh=h7;
+    for(let i=0;i<64;i++){
+      const S1=ror(e,6)^ror(e,11)^ror(e,25);
+      const ch=(e&f)^((~e)&g);
+      const t1=(hh+S1+ch+K[i]+w[i])|0;
+      const S0=ror(a,2)^ror(a,13)^ror(a,22);
+      const maj=(a&b)^(a&c)^(b&c);
+      const t2=(S0+maj)|0;
+      hh=g; g=f; f=e; e=(d+t1)|0; d=c; c=b; b=a; a=(t1+t2)|0;
+    }
+    h0=(h0+a)|0; h1=(h1+b)|0; h2=(h2+c)|0; h3=(h3+d)|0; h4=(h4+e)|0; h5=(h5+f)|0; h6=(h6+g)|0; h7=(h7+hh)|0;
+  }
+  function hx(x){return (x>>>0).toString(16).padStart(8,"0");}
+  return hx(h0)+hx(h1)+hx(h2)+hx(h3)+hx(h4)+hx(h5)+hx(h6)+hx(h7);
+}
+function genCode(i){return "";}
+function verifyCode(code){return false;}
+var LIC_KEY="ks_lic_v1";
+function isActivated(){return true;}
+function wireLock(){
+  var inp=document.getElementById("actInput"), err=document.getElementById("actErr");
+  function tryAct(){
+    if(verifyCode(inp.value)){
+      try{localStorage.setItem(LIC_KEY, inp.value.trim().toUpperCase());}catch(e){}
+      document.body.classList.remove("locked");
+      document.getElementById("lock").style.display="none";
+      toast("激活成功，开始使用");
+    } else {
+      err.style.display="block";
+      inp.classList.add("shake"); setTimeout(function(){inp.classList.remove("shake");},450);
+    }
+  }
+  document.getElementById("actBtn").onclick=tryAct;
+  inp.addEventListener("keydown",function(e){if(e.key==="Enter")tryAct();});
+  inp.addEventListener("input",function(){err.style.display="none";});
+}
+
+/* ---------- init ---------- */
+if(!isActivated()){document.body.classList.add("locked");wireLock();}
+(function demoBanner(){
+  var d=document.getElementById("lock"); if(d) d.style.display="none";
+  document.body.classList.remove("locked");
+  var b=document.createElement("div");
+  b.textContent="体验版 · 最多录入 "+DEMO_MAX+" 节课 · 完整版请向分发者获取授权码";
+  b.style.cssText="position:fixed;left:0;right:0;bottom:0;z-index:9999;background:#111;color:#ffd166;"+
+    "font:12px/1.6 -apple-system,'Microsoft YaHei',sans-serif;text-align:center;padding:6px 8px;opacity:.92";
+  document.body.appendChild(b);
+  document.body.style.paddingBottom="34px";
+})();
+renderHeader();renderToday();renderWeek();renderSettings();renderStat();
+setupDaily();
+setInterval(check,10000);check();
+setInterval(()=>{renderHeader();if(document.getElementById("tab-today").classList.contains("active"))renderToday();},30000);
+document.addEventListener("visibilitychange",()=>{if(!document.hidden){renderToday();check();}});
+// 解锁音频（移动端需用户交互）
+document.body.addEventListener("click",function once(){try{const c=new(window.AudioContext||window.webkitAudioContext)();c.close();}catch(_){}document.body.removeEventListener("click",once);},{once:true});
+// PWA：注册 Service Worker 实现离线/可安装（需通过 http(s) 打开）
+if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});}
+</script>
+</body>
+</html>

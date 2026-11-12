@@ -1,0 +1,14 @@
+{
+  "name": "课时表提醒",
+  "short_name": "课时表",
+  "description": "个性化课表与上课提醒，支持微信推送，多人独立使用。",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eef1f8",
+  "theme_color": "#5b6ef5",
+  "icons": [
+    { "src": "icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
